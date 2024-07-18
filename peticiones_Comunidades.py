@@ -28,23 +28,7 @@ def add_comunidad():
     observaciones = data.get("observaciones")
     carrera_id = data.get("carrera_id")
     docente_id = data.get("docente_id")
-    campos_faltantes = []
-    if not nombre_comunidad:
-        campos_faltantes.append("nombre_comunidad")
-    if not periodo_comunidad:
-        campos_faltantes.append("periodo_comunidad")
-    if not ubicacion_comunidad:
-        campos_faltantes.append("ubicacion_comunidad")
-    if not observaciones:
-        campos_faltantes.append("observaciones")
-    if not carrera_id:
-        campos_faltantes.append("id_carrera")
-    if not docente_id:
-        campos_faltantes.append("id_docente")
     
-    if campos_faltantes:
-        print("Error: Faltan datos en la solicitud. Campos faltantes:", campos_faltantes)
-        return jsonify({"error": "Faltan datos", "campos_faltantes": campos_faltantes}), 400
     # Validar que todos los campos requeridos estén presentes
     if not nombre_comunidad or not periodo_comunidad or not ubicacion_comunidad or not carrera_id or not docente_id:
         print("Error: Faltan datos en la solicitud")

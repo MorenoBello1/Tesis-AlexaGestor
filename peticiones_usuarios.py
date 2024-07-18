@@ -1,6 +1,9 @@
 from conexion import *
 from flask import Blueprint,Flask, request, jsonify, render_template
 from conexion import *
+from auth import login  # Importar la función de autenticación desde el módulo auth
+
+from google.oauth2 import service_account
 
 import uuid
 
@@ -31,7 +34,7 @@ def add_usuario():
     print("Datos recibidos:", data)
     nombres = data.get("nombres")
     apellidos = data.get("apellidos")
-    correo = data.get("correo")
+    correo = data.get("correo").strip()
     contrasenia = data.get("contrasenia")
     
     if not nombres or not apellidos or not correo or not contrasenia:
@@ -57,6 +60,8 @@ def add_usuario():
                 "contrasenia":contrasenia
             }
             Resultado = collection.insert_one(usuario)
+             # Obtener todos los correos de los usuarios
+            
             client.close()
             return jsonify({"mensaje": f"usuario con éxito", "id": usuario_id}), 200
         else:
@@ -71,11 +76,23 @@ def delete_usuario(_id):
     try:
         db = client.AlexaGestor
         collection = db.usuarios
-        result = collection.delete_one({"_id": _id})
-        if result.deleted_count == 1:
-            return jsonify({"mensaje": f"usuario con id: {_id} eliminado con éxito"}), 200
+
+        usuario = collection.find_one({"_id": _id})
+        if usuario:
+            email_usuario = usuario.get('correo')
+
+            # Revocar permisos antes de eliminar el usuario
+            carpetas = ['18KiGWZdqFzHS9eSpeBjetyH3YW4g3lce', '1COEo694kE7LcvZmBaPtviknw7ocky6PU', '1-KZqvvcRAM-n1h-OEC6ICHUgENCJdoTl']
+
+            # Eliminar el usuario de la base de datos
+            result = collection.delete_one({"_id": _id})
+            if result.deleted_count == 1:
+                return jsonify({"mensaje": f"Usuario con id: {_id} eliminado con éxito"}), 200
+            else:
+                return jsonify({"error": f"No se encontró el usuario con id: {_id}"}), 404
         else:
             return jsonify({"error": f"No se encontró el usuario con id: {_id}"}), 404
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -107,6 +124,4 @@ def obtener_usuarios():
 @user_ruta.errorhandler(404)
 def not_found(error):
     return jsonify({"error": "No encontrado"}), 404
-
-# Manejo de errores 500 (Error interno del servidor)
 

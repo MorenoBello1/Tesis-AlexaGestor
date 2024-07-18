@@ -45,7 +45,10 @@ def upload_and_add():
     fecha_actualizacion = request.form['fecha_actualizacion']
     observacion = request.form['observacion']
     carrera_id = request.form['carrera_id']
-    
+
+    if not nombre_formato or not fecha_actualizacion or not carrera_id:
+        print("Error: Faltan datos en la solicitud")
+        return jsonify({"error": "Faltan datos"}), 400
     id_folder = '1-KZqvvcRAM-n1h-OEC6ICHUgENCJdoTl'  # Reemplaza esto con tu ID de carpeta en Google Drive
 
     if file.filename == '':

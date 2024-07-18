@@ -85,6 +85,9 @@ def upload_and_process():
     file = request.files['file']
     periodo_horario = request.form.get("periodo_horario")
     observacion = request.form.get("observacion")
+    if not periodo_horario:
+        print("Error: Faltan datos en la solicitud")
+        return jsonify({"error": "Faltan datos"}), 400
 
     id_folder = '1COEo694kE7LcvZmBaPtviknw7ocky6PU'  # ID de la carpeta en Google Drive
 

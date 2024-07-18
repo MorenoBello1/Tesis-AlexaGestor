@@ -30,7 +30,7 @@ def add_evento():
     ubicacion_evento = data.get("ubicacion_evento")
     observaciones = data.get("observaciones")  # Cambiar a minúscula para que coincida
 
-    if not nombre_evento or not fecha_evento_inicio or not fecha_evento_fin or not ubicacion_evento or not observaciones:
+    if not nombre_evento or not fecha_evento_inicio or not fecha_evento_fin or not ubicacion_evento:
         print("Error: Faltan datos en la solicitud")
         return jsonify({"error": "Faltan datos"}), 400
 
