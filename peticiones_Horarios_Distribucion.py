@@ -13,7 +13,7 @@ from PIL import Image
 horarios_ruta = Blueprint('horarios', __name__)
 
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'pdf'}
 horarios_ruta.config = {'UPLOAD_FOLDER': UPLOAD_FOLDER}
 
 # Asegúrate de que el directorio de subidas exista
@@ -47,7 +47,6 @@ def subir_imagen_a_drive(credenciales, image_path, folder_id, image_title):
         imagen_drive.SetContentFile(image_path)
         imagen_drive.Upload()
         file_id = imagen_drive['id']  # Obtén el ID del archivo subido
-        print(f"Imagen subida a Google Drive: {image_title} con ID: {file_id}")
         return file_id
     except Exception as e:
         print(f"Error al subir la imagen a Google Drive: {str(e)}")
@@ -80,19 +79,18 @@ def home():
 @horarios_ruta.route('/upload_and_add_horario', methods=['POST'])
 def upload_and_process():
     if 'file' not in request.files:
-        return jsonify(message='No se subió ningún archivo'), 400
+        return jsonify(success=False, message='No se subio ningun archivo')
 
     file = request.files['file']
     periodo_horario = request.form.get("periodo_horario")
     observacion = request.form.get("observacion")
     if not periodo_horario:
-        print("Error: Faltan datos en la solicitud")
-        return jsonify({"error": "Faltan datos"}), 400
+        return jsonify(success=False, message='Faltan campos por completar')
 
     id_folder = '1COEo694kE7LcvZmBaPtviknw7ocky6PU'  # ID de la carpeta en Google Drive
 
     if file.filename == '':
-        return jsonify(message='No seleccionaste ningún archivo'), 400
+        return jsonify(success=False, message='No seleccionaste ningun archivo . ')
 
     if file and allowed_file(file.filename):
         secure_name = secure_filename(file.filename)
@@ -133,16 +131,13 @@ def upload_and_process():
 
                 # Eliminar el archivo local después de procesarlo y subirlo
                 os.remove(file_path)
-                print(f"Archivo local eliminado después de procesarlo: {file_path}")
-
-                # Redirigir a otra página después de la subida
-                return jsonify(message='Horario agregado, archivo subido y convertido exitosamente'), 200
-
+                if convertir_pdf_a_imagenes_y_subir_a_drive:
+                    return jsonify(success=True)
         except Exception as e:
-            return jsonify(message=f"Error al procesar: {str(e)}"), 500
+            return jsonify(success=False)
 
     else:
-        return jsonify(message='Tipo de archivo no permitido'), 400
+        return jsonify(success=False, message='Tipo de archivo no permitido.')
 
     return redirect(url_for('horarios.ingreso_comunidades'))
 
@@ -170,8 +165,7 @@ def convertir_pdf_a_imagenes_y_subir_a_drive(input_pdf,horario_id, dpi=300):
             
             lineas_con_profesor = extraer_lineas_con_profesor(texto)
             if not lineas_con_profesor:
-                print(f"No se encontraron líneas con información relevante en la página {numero_pagina + 1}")
-                nombrefinal = f"DocenteNoReconocido_{numero_pagina + 1}"
+                nombrefinal = f"NO RECONOCIDO {numero_pagina + 1}"
                 
             else:
                 for linea in lineas_con_profesor:
@@ -182,7 +176,6 @@ def convertir_pdf_a_imagenes_y_subir_a_drive(input_pdf,horario_id, dpi=300):
                         if nombrefinal and all(nombrefinal):
                             print(f"Nombre final: {nombrefinal}")
                         else:
-                            print("Nombre final está vacío o no es válido.")
                             nombrefinal = f"DocenteNoReconocido_{numero_pagina + 1}"
 
             nombrefinal_str = " ".join(nombrefinal)  # Concatena los nombres con un espacio
@@ -196,7 +189,7 @@ def convertir_pdf_a_imagenes_y_subir_a_drive(input_pdf,horario_id, dpi=300):
             time.sleep(1)
             try:
                 os.remove(output_image_path)
-                print(f"Archivo local eliminado: {output_image_path}")
+                #print(f"Archivo local eliminado: {output_image_path}")
             except Exception as e:
                 print(f"No se pudo eliminar el archivo: {str(e)}")
 
@@ -228,7 +221,6 @@ def upload_and_process_image(horario_id, imagen_ids, imagen_path, nombrefinal_st
         
         # Insertar el documento en la colección
         collection_horarioI.insert_one(horariosIndividuales)
-        print("Documento insertado correctamente en MongoDB.")
 
         client.close()
     else:
@@ -253,7 +245,7 @@ def obtener_horarios():
         return jsonify({"horarios": horarios}), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("ERROR")
 @horarios_ruta.route('/eliminar/horario/<_id>', methods=['DELETE'])
 def delete_horario(_id):
     client = connect_to_mongodb()
@@ -263,15 +255,14 @@ def delete_horario(_id):
 
         # Obtener todos los documentos individuales que coincidan con el _id de horario
         horariosIndividuales = list(collection_I.find({"horario_id": _id}))
-        if not horariosIndividuales:
-            return jsonify({"error": f"No se encontraron horarios individuales con id {_id}"}), 404
+        
         
         for horarioIndividual in horariosIndividuales:
             # Obtener los IDs de las imágenes de OneDrive asociadas
             imagen_ids = horarioIndividual.get("imagen_ids", [])
 
             # Imprimir los IDs de las imágenes para verificar su contenido
-            print(f"IDs de imágenes de OneDrive para horario individual {_id}: {imagen_ids}")
+            #print(f"IDs de imágenes de OneDrive para horario individual {_id}: {imagen_ids}")
             borrar_horarioimagen(imagen_ids)            
             
             # Eliminar documentos individuales de la colección horariosIndividual
@@ -286,9 +277,9 @@ def delete_horario(_id):
                 borrar_horarioOnedrive(id_googledrive)
             collection.delete_one({"_id": _id})
             
-        return jsonify({"mensaje": f"Formato con id: {_id} eliminado con éxito"}), 200
+        return jsonify(success=True)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("ERROR")
     finally:
         client.close()
 
@@ -343,6 +334,6 @@ def obtener_horariosIn():
         
         return jsonify({"horarios_individuales": horarios_individuales}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(  "eRROR")
     finally:
         client.close()

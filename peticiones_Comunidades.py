@@ -31,8 +31,7 @@ def add_comunidad():
     
     # Validar que todos los campos requeridos estén presentes
     if not nombre_comunidad or not periodo_comunidad or not ubicacion_comunidad or not carrera_id or not docente_id:
-        print("Error: Faltan datos en la solicitud")
-        return jsonify({"error": "Faltan datos"}), 400
+        return jsonify(success=False, message='Faltan campos por completar')
 
     # Conectar a MongoDB
     client = connect_to_mongodb()
@@ -47,15 +46,11 @@ def add_comunidad():
             
             # Verificar existencia de id_docente en la colección docentes
             docente = collection_docentes.find_one({"_id": docente_id})
-            if not docente:
-                print("Error: id_docente no existe")
-                return jsonify({"error": "id_docente no existe"}), 400
+            
             
             # Verificar existencia de id_carrera en la colección carreras
             carrera = collection_carreras.find_one({"_id": carrera_id})
-            if not carrera:
-                print("Error: id_carrera no existe")
-                return jsonify({"error": "id_carrera no existe"}), 400
+            
             
             # Generar un ID único para la comunidad
             comunidad_id = str(uuid.uuid4())
@@ -74,10 +69,13 @@ def add_comunidad():
             # Insertar el documento en la colección
             result = collection_comunidades.insert_one(comunidad)
             print("Comunidad agregada con ID:", comunidad_id)
-            return jsonify({"mensaje": "Comunidad agregada exitosamente", "comunidad_id": comunidad_id}), 201
+            if result:
+                return jsonify(success=True)
+            else:
+                return jsonify(success=False, message=f'Ha surgido un error al agregar la comunidad {nombre_comunidad}.')
+
     except Exception as e:
-        print("Error al conectar o insertar en MongoDB:", str(e))
-        return jsonify({"error": "Error al conectar o insertar en MongoDB"}), 500
+        return jsonify(success=False)
     finally:
         client.close()
     
@@ -89,11 +87,12 @@ def delete_comunidad(_id):
         collection = db.comunidades
         result = collection.delete_one({"_id": _id})
         if result.deleted_count == 1:
-            return jsonify({"mensaje": f"Comunidad con id: {_id} eliminado con éxito"}), 200
+            print("eliminado con exito")
+            return jsonify(success=True)
         else:
-            return jsonify({"error": f"No se encontró la carrera con id: {_id}"}), 404
+            return jsonify(success=False, message=f'Ha surgido un problema al eliminar la comunidad.')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+            return jsonify(success=False)
     finally:
         client.close()
 @comunidades_ruta.route('/api/comunidades', methods=['GET'])
@@ -119,7 +118,7 @@ def obtener_comunidades():
         
         return jsonify({"comunidades": comunidades}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify(success=False)
     finally:
         client.close()
 

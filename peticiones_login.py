@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template, session, redirect, url_for
+from flask import Blueprint, request, jsonify, render_template, session, redirect, url_for, flash
 from conexion import connect_to_mongodb
 import uuid
 
@@ -17,7 +17,7 @@ def verificarsesion():
     contrasenia = data.get("contrasenia")
     
     if not correo or not contrasenia:
-        return jsonify({"error": "Faltan datos"}), 400
+        return jsonify(success=False, message="Faltan datos"), 400
 
     client = connect_to_mongodb()
 
@@ -30,19 +30,16 @@ def verificarsesion():
             # Guardar el ID del usuario en la sesión
             session['usuario_id'] = str(usuario["_id"])
             session['usuario_nombre'] = usuario.get("nombres")  # Opcional: Guardar nombre en la sesión
-            return jsonify({"mensaje": "Usuario autenticado con éxito"}), 200
+            return jsonify(success=True, message='Usuario autenticado exitosamente.')
         else:
-            return jsonify({"error": "Credenciales incorrectas"}), 401
+            return jsonify(success=False, message='Credenciales incorrectas.')
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify(success=False)
     finally:
         client.close()
 # Ruta para cerrar sesión
 @login_ruta.route('/logout', methods=['GET'])
 def logout():
-    # Eliminar todos los datos de la sesión
-    session.clear()
-    
-    # Redirigir al usuario al login con un mensaje
+    session.clear()  # Limpiar la sesión
     return redirect(url_for('login.home'))

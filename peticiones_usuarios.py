@@ -38,8 +38,7 @@ def add_usuario():
     contrasenia = data.get("contrasenia")
     
     if not nombres or not apellidos or not correo or not contrasenia:
-        print("Error: Faltan datos en la solicitud")
-        return jsonify({"error": "Faltan datos"}), 400
+        return jsonify(success=False, message='Faltan campos por completar')
 
     client = connect_to_mongodb()
 
@@ -61,14 +60,17 @@ def add_usuario():
             }
             Resultado = collection.insert_one(usuario)
              # Obtener todos los correos de los usuarios
-            
             client.close()
-            return jsonify({"mensaje": f"usuario con éxito", "id": usuario_id}), 200
+
+            if Resultado:
+                return jsonify(success=True, message=f"Se ha agregado un administrador: {apellidos} {nombres}")
+
+            else:
+                return jsonify(success=False, message=f'Ha surgido un error al agregar al usuario {nombres}.')
         else:
-            return jsonify({"error": "No se pudo conectar a MongoDB Atlas"}), 500
+            return jsonify(success=False, message=f'Ha surgido un problema con la conexión.')
     except Exception as e:
         print("Error:", e)
-        return jsonify({"error": str(e)}), 500
     
 @user_ruta.route('/eliminar/usuario/<_id>', methods=['DELETE'])
 def delete_usuario(_id):
@@ -87,15 +89,11 @@ def delete_usuario(_id):
             # Eliminar el usuario de la base de datos
             result = collection.delete_one({"_id": _id})
             if result.deleted_count == 1:
-                return jsonify({"mensaje": f"Usuario con id: {_id} eliminado con éxito"}), 200
+                return jsonify(success=True)
             else:
-                return jsonify({"error": f"No se encontró el usuario con id: {_id}"}), 404
-        else:
-            return jsonify({"error": f"No se encontró el usuario con id: {_id}"}), 404
-        
+                return jsonify(success=False, message=f'Ha surgido un problema al eliminar al docente.')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
+        print("Error")
         client.close()
 
 @user_ruta.route('/api/usuarios', methods=['GET'])
@@ -118,10 +116,5 @@ def obtener_usuarios():
         return jsonify({"usuarios": usuarios}), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Manejo de errores 404 (No encontrado)
-@user_ruta.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "No encontrado"}), 404
+        print("error")
 

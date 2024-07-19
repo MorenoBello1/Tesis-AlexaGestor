@@ -28,7 +28,7 @@ def get_carreras():
         carreras = list(collection.find({}, {"_id": 1, "nombre_carrera": 1}))
         return jsonify(carreras), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("error")
     finally:
         client.close()
 
@@ -36,13 +36,11 @@ def get_carreras():
 @carreras_ruta.route('/agregar/carrera', methods=['PUT'])
 def add_carrera():
     data = request.get_json()
-    print("Datos recibidos:", data)
     nombre_carrera = data.get("nombre_carrera")
     descripcion = data.get("descripcion")
     
     if not nombre_carrera or not descripcion:
-        print("Error: Faltan datos en la solicitud")
-        return jsonify({"error": "Faltan datos"}), 400
+        return jsonify(success=False, message='Faltan campos por completar')
 
     client = connect_to_mongodb()
 
@@ -61,15 +59,15 @@ def add_carrera():
                 "descripcion": descripcion
             }
             result = collection.insert_one(carrera)
-            print(f"Carrera {nombre_carrera} añadida con ID: {carrera_id}")
             client.close()
-            return jsonify({"mensaje": f"Carrera {nombre_carrera} añadida con éxito", "id": carrera_id}), 200
+            if result:
+                return jsonify(success=True)
+            else:
+                return jsonify(success=False, message=f'Ha surgido un error al agregar al docente {nombre_carrera}.')
         else:
-            print("Error: No se pudo conectar a MongoDB Atlas")
-            return jsonify({"error": "No se pudo conectar a MongoDB Atlas"}), 500
+            return jsonify(success=False, message=f'Ha surgido un problema con la conexión.')
     except Exception as e:
         print("Error:", e)
-        return jsonify({"error": str(e)}), 500
 
 @carreras_ruta.route('/eliminar/carrera/<_id>', methods=['DELETE'])
 def delete_carrera(_id):
@@ -79,11 +77,11 @@ def delete_carrera(_id):
         collection = db.carreras
         result = collection.delete_one({"_id": _id})
         if result.deleted_count == 1:
-            return jsonify({"mensaje": f"Carrera con id: {_id} eliminado con éxito"}), 200
+            return jsonify(success=True)
         else:
-            return jsonify({"error": f"No se encontró la carrera con id: {_id}"}), 404
+            return jsonify(success=False, message=f'Ha surgido un problema al eliminar la carrera.')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("Error")
     finally:
         client.close()
 
@@ -107,14 +105,4 @@ def obtener_carreras():
         return jsonify({"carreras": carreras}), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Manejo de errores 404 (No encontrado)
-@carreras_ruta.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "No encontrado"}), 404
-
-# Manejo de errores 500 (Error interno del servidor)
-@carreras_ruta.errorhandler(500)
-def internal_error(error):
-    return jsonify({"error": "Error interno del servidor"}), 500
+        print("error")

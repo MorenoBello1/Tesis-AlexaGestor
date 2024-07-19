@@ -36,8 +36,7 @@ def add_docente():
     apellido_docente = data.get("apellido_docente")
     
     if not nombre_docente or not apellido_docente:
-        print("Error: Faltan datos en la solicitud")
-        return jsonify({"error": "Faltan datos"}), 400
+        return jsonify(success=False, message='Faltan campos por completar')
 
     client = connect_to_mongodb()
 
@@ -56,15 +55,17 @@ def add_docente():
                 "apellido_docente": apellido_docente
             }
             result = collection.insert_one(docentes)
-            print(f"Carrera {nombre_docente} añadida con ID: {docente_id}")
             client.close()
-            return jsonify({"mensaje": f"Docente {nombre_docente} añadida con éxito", "id": docente_id}), 200
+
+            if result:
+                return jsonify(success=True)
+            else: 
+                return jsonify(success=False, message=f'Ha surgido un error al agregar al docente {nombre_docente}.')
         else:
-            print("Error: No se pudo conectar a MongoDB Atlas")
-            return jsonify({"error": "No se pudo conectar a MongoDB Atlas"}), 500
+            return jsonify(success=False, message=f'Ha surgido un problema con la conexión.')
     except Exception as e:
         print("Error:", e)
-        return jsonify({"error": str(e)}), 500
+        return jsonify(success=False)
     
 @docentes_ruta.route('/eliminar/docente/<_id>', methods=['DELETE'])
 def delete_docente(_id):
@@ -74,11 +75,11 @@ def delete_docente(_id):
         collection = db.docentes
         result = collection.delete_one({"_id": _id})
         if result.deleted_count == 1:
-            return jsonify({"mensaje": f"Docente con id: {_id} eliminado con éxito"}), 200
+            return jsonify(success=True)
         else:
-            return jsonify({"error": f"No se encontró el docente con id: {_id}"}), 404
+            return jsonify(success=False, message=f'Ha surgido un problema al eliminar al docente.')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify(success=False)
     finally:
         client.close()
 
@@ -102,16 +103,4 @@ def obtener_docentes():
         return jsonify({"docentes": docentes}), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Manejo de errores 404 (No encontrado)
-@docentes_ruta.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "No encontrado"}), 404
-
-# Manejo de errores 500 (Error interno del servidor)
-@docentes_ruta.errorhandler(500)
-def internal_error(error):
-    return jsonify({"error": "Error interno del servidor"}), 500
-
-# Si el script se ejecuta directamente, inicia el servidor de desarrollo de Flask
+        print("error")

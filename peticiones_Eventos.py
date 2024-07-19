@@ -31,8 +31,8 @@ def add_evento():
     observaciones = data.get("observaciones")  # Cambiar a minúscula para que coincida
 
     if not nombre_evento or not fecha_evento_inicio or not fecha_evento_fin or not ubicacion_evento:
-        print("Error: Faltan datos en la solicitud")
-        return jsonify({"error": "Faltan datos"}), 400
+        return jsonify(success=False, message='Faltan campos por completar')
+
 
     client = connect_to_mongodb()
 
@@ -54,15 +54,16 @@ def add_evento():
                 "observaciones": observaciones
             }
             result = collection.insert_one(evento)
-            print(f"Evento {nombre_evento} añadida con ID: {evento_id}")
             client.close()
-            return jsonify({"mensaje": f"Evento {nombre_evento} añadido con éxito", "id": evento_id}), 200
+            if result:
+                return jsonify(success=True)
+            else:
+                return jsonify(success=False, message=f'Ha surgido un error al agregar el evento {nombre_evento}.')
         else:
             print("Error: No se pudo conectar a MongoDB Atlas")
-            return jsonify({"error": "No se pudo conectar a MongoDB Atlas"}), 500
+            return jsonify(success=False, message=f'Ha surgido un problema con la conexion.')
     except Exception as e:
         print("Error:", e)
-        return jsonify({"error": str(e)}), 500
     
 @eventos_ruta.route('/eliminar/evento/<_id>', methods=['DELETE'])
 def delete_carrera(_id):
@@ -72,9 +73,9 @@ def delete_carrera(_id):
         collection = db.eventos
         result = collection.delete_one({"_id": _id})
         if result.deleted_count == 1:
-            return jsonify({"mensaje": f"Evento con id: {_id} eliminado con éxito"}), 200
+            return jsonify(success=True)
         else:
-            return jsonify({"error": f"No se encontró el evento con id: {_id}"}), 404
+            return jsonify(success=False, message=f'Ha surgido un problema al eliminar el evento.')
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -100,16 +101,4 @@ def obtener_eventos():
         return jsonify({"eventos": eventos}), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Manejo de errores 404 (No encontrado)
-@eventos_ruta.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "No encontrado"}), 404
-
-# Manejo de errores 500 (Error interno del servidor)
-@eventos_ruta.errorhandler(500)
-def internal_error(error):
-    return jsonify({"error": "Error interno del servidor"}), 500
-
-# Si el script se ejecuta directamente, inicia el servidor de desarrollo de Flask
+        print("error")

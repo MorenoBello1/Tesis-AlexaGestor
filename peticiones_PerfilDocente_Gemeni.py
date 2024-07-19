@@ -86,9 +86,13 @@ def add_perfil():
     try:
         perfilgoogle_id = request.form.get("perfilgoogle_id")
         docente_id = request.form.get("docente_id")
+        author_name = request.form.get("author_name")
+        if not author_name or author_name == "ID de autor no válido":
+            return jsonify(success=False, message='El autor no puede estar vacio ni ser invalido')
+
 
         if not docente_id or not perfilgoogle_id:
-            return jsonify({"error": "Faltan datos"}), 400
+            return jsonify(success=False, message='Faltan campos por completar')
         client = connect_to_mongodb()
         db = client.AlexaGestor
         collection_perfiles = db.perfiles
@@ -115,16 +119,16 @@ def add_perfil():
             # Iniciar el procesamiento en un hilo separado
             Thread(target=process_and_store_data, args=(perfilgoogle_id, docente_id, perfil_id)).start()
 
-            return jsonify({"mensaje": f"Perfil académico agregado exitosamente, id: {perfil_id}. Proceso de actualización iniciado."}), 201
+            return jsonify(success=True)
 
         else:
-            return jsonify({"error": "No se pudo insertar el perfil en la base de datos"}), 500
+            return jsonify(success=False, message=f'Ha surgido un error al agregar el perfil')
 
     except StopIteration:
-        return jsonify({"error": "No se encontró el autor con el ID proporcionado en Google Scholar"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify(success=False, message=f'No se encontro el ID proporcionado en google Scholar')
 
+    except Exception as e:
+        print("Error")
 # Función para la actualización periódica de perfilesGoogle
 def periodic_update():
     while True:
@@ -163,13 +167,12 @@ def delete_perfil(_id):
         result_perfilesGoogle = collection_perfilesGoogle.delete_one({"perfil_id": _id})
         
         if result_perfiles.deleted_count == 1:
-            return jsonify({"mensaje": f"Perfil académico con ID {_id} eliminado con éxito"}), 200
+            return jsonify(success=True)
         else:
-            return jsonify({"error": f"No se encontró el perfil con ID {_id}"}), 404
+            return jsonify(success=False, message=f'Ha surgido un error al eliminar perfil.')
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
+        print("Error")
     finally:
         client.close()
 
@@ -195,7 +198,6 @@ def obtener_perfiles():
         return jsonify({"perfiles": perfiles}), 200
     except Exception as e:
         print(f"Error en obtener_perfiles(): {str(e)}")
-        return jsonify({"error": str(e)}), 500
     finally:
         client.close()
 @perfil_ruta.route('/send_author_id', methods=['POST'])

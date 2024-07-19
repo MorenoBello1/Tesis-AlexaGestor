@@ -22,7 +22,7 @@ def add_proceso():
 
 
         if not nombre_pa or not docente_id or not fecha_pa_fin or not fecha_pa_inicio or not carrera_id:
-            return jsonify({"error": "Faltan datos"}), 400
+            return jsonify(success=False, message='Faltan campos por completar')
 
         # Conectar a MongoDB
         client = connect_to_mongodb()
@@ -56,15 +56,15 @@ def add_proceso():
         }
 
         # Insertar el documento en la colección de horarios
-        collection_procesoA.insert_one(procesosAcademicos)
+        result=collection_procesoA.insert_one(procesosAcademicos)
 
         client.close()
-
-        return jsonify({"mensaje": "Proceso academico agregado exitosamente", "pa_id": pa_id}), 201
-
+        if result:
+            return jsonify(success=True)
+        else:
+            return jsonify(success=False, message=f'Ha surgido un error al agregar al docente {nombre_docente}.')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        print("Error")
 @procesos_ruta.route('/eliminar/proceso/<_id>', methods=['DELETE'])
 def delete_horario(_id):
     client = connect_to_mongodb()
@@ -73,11 +73,11 @@ def delete_horario(_id):
         collection = db.procesosAcademicos
         result = collection.delete_one({"_id": _id})
         if result.deleted_count == 1:
-            return jsonify({"mensaje": f"Proceso academico con id: {_id} eliminado con éxito"}), 200
+            return jsonify(success=True)
         else:
-            return jsonify({"error": f"No se encontró el proceso con id: {_id}"}), 404
+            return jsonify(success=False, message=f'Ha surgido un problema al eliminar al docente.')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify(success=False)
     finally:
         client.close()
 
@@ -108,7 +108,6 @@ def obtener_procesos():
         return jsonify({"procesos": procesos}), 200
     except Exception as e:
         print(f"Error en obtener_procesos(): {str(e)}")
-        return jsonify({"error": str(e)}), 500
     finally:
         client.close()
 

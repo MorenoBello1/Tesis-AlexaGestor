@@ -8,7 +8,7 @@ from conexion import *
 formatos_ruta = Blueprint('formatos2', __name__)
 
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx', 'xls', 'xlsx'}
 
 formatos_ruta.config = {'UPLOAD_FOLDER': UPLOAD_FOLDER}
 
@@ -38,7 +38,7 @@ def home():
 @formatos_ruta.route('/upload_and_add', methods=['POST'])
 def upload_and_add():
     if 'file' not in request.files:
-        return 'No se subió ningún archivo'
+        return jsonify(success=False, message='No se subio ningun archivo')
     
     file = request.files['file']
     nombre_formato = request.form['nombre_formato']
@@ -47,12 +47,12 @@ def upload_and_add():
     carrera_id = request.form['carrera_id']
 
     if not nombre_formato or not fecha_actualizacion or not carrera_id:
-        print("Error: Faltan datos en la solicitud")
-        return jsonify({"error": "Faltan datos"}), 400
+        return jsonify(success=False, message='Faltan campos por completar')
+    
     id_folder = '1-KZqvvcRAM-n1h-OEC6ICHUgENCJdoTl'  # Reemplaza esto con tu ID de carpeta en Google Drive
 
     if file.filename == '':
-        return 'No seleccionaste ningún archivo'
+        return jsonify(success=False, message='No seleccionaste ningun archivo . ')
     
     if file and allowed_file(file.filename):
         secure_name = secure_filename(file.filename)
@@ -87,15 +87,17 @@ def upload_and_add():
                     "id_onedrive": id_onedrive  # Agrega el ID de OneDrive aquí
                 }
                 
-                collection_formatos.insert_one(formatos)
-                # Redirigir a otra página después de la subida
-                return "Formato agregado y archivo subido exitosamente"
+                result = collection_formatos.insert_one(formatos)
+                if result:
+                    return jsonify(success=True)
+                else:
+                    return jsonify(success=False, message=f'Ha surgido un error al agregar al docente {nombre_formato}.')
         except Exception as e:
-            return "Error al conectar o insertar en MongoDB", 500
+            return jsonify(success=False)
         finally:
             client.close()
     else:
-        return 'Tipo de archivo no permitido'
+        return jsonify(success=False, message='Tipo de archivo no permitido.')
 
 @formatos_ruta.route('/obtener_carreras')
 def obtener_carreras():
@@ -108,7 +110,7 @@ def obtener_carreras():
             carreras = [{'_id': str(carrera['_id']), 'nombre_carrera': carrera['nombre_carrera']} for carrera in carreras]
             return jsonify(carreras)
     except Exception as e:
-        return jsonify({"error": "Error al conectar o consultar MongoDB"}), 500
+        print("error")
     finally:
         client.close()
 
@@ -131,7 +133,7 @@ def obtener_formatos():
         
         return jsonify({"formatos": formatos}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("error obtener")
     finally:
         client.close()
 
@@ -144,8 +146,6 @@ def delete_formato(_id):
 
         # Buscar el documento en la base de datos para obtener el ID de archivo de OneDrive
         formato = collection.find_one({"_id": _id})
-        if not formato:
-            return jsonify({"error": f"No se encontró el formato con id: {_id}"}), 404
         
         # Obtener el ID de archivo de OneDrive
         id_onedrive = formato.get("id_onedrive")
@@ -156,12 +156,11 @@ def delete_formato(_id):
             # Eliminar archivo de OneDrive si existe ID de OneDrive
             if id_onedrive:
                 borrar_formatoOnedrive(id_onedrive)
-            
-            return jsonify({"mensaje": f"Formato con id: {_id} eliminado con éxito"}), 200
+            return jsonify(success=True)
         else:
-            return jsonify({"error": f"No se encontró el formato con id: {_id}"}), 404
+            return jsonify(success=False, message=f'Ha surgido un problema al eliminar al formato')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("error")
     finally:
         client.close()
 

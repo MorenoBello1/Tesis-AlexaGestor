@@ -20,7 +20,7 @@ def recuperar_contraseña():
     correo = data.get("correo")
     
     if not correo:
-        return jsonify({"error": "Faltan datos"}), 400
+        return jsonify(success=False, message="Falta correo"), 400
 
     client = connect_to_mongodb()
 
@@ -48,14 +48,14 @@ def recuperar_contraseña():
             
             correo_enviado = enviar_correo(destinatario, asunto, cuerpo)
             if correo_enviado:
-                return jsonify({"mensaje": "Se ha enviado la información al correo proporcionado"}), 200
+                return jsonify(success=True, message="Se ha enviado la información al correo proporcionado."), 400
             else: 
-                return jsonify({"mensaje": "No se puedo enviar el correo."}), 200
+                return jsonify(success=False, message="No se pudo enviar el correo."), 400
         else:
-            return jsonify({"error": "Correo no encontrado"}), 404
+                return jsonify(success=False, message="El correo proporcionado no existe en el registro."), 400
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify(success=False)
     finally:
         client.close()
 # Ruta para cerrar sesión
