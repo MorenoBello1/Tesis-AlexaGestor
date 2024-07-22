@@ -17,7 +17,7 @@ def home():
 @logincontraseña_ruta.route('/recuperacion', methods=['POST'])
 def recuperar_contraseña():
     data = request.get_json()
-    correo = data.get("correo")
+    correo = data.get("correo", '').strip()
     
     if not correo:
         return jsonify(success=False, message="Falta correo"), 400

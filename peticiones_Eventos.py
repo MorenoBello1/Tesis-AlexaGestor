@@ -24,7 +24,7 @@ def add_evento():
     data = request.get_json()
     print("Datos recibidos:", data)
     
-    nombre_evento = data.get("nombre_evento")
+    nombre_evento = data.get("nombre_evento", "").strip()
     fecha_evento_inicio = data.get("fecha_evento_inicio")
     fecha_evento_fin = data.get("fecha_evento_fin")
     ubicacion_evento = data.get("ubicacion_evento")

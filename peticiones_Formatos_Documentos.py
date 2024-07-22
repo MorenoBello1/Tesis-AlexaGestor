@@ -41,7 +41,7 @@ def upload_and_add():
         return jsonify(success=False, message='No se subio ningun archivo')
     
     file = request.files['file']
-    nombre_formato = request.form['nombre_formato']
+    nombre_formato = request.form.get('nombre_formato', '').strip()
     fecha_actualizacion = request.form['fecha_actualizacion']
     observacion = request.form['observacion']
     carrera_id = request.form['carrera_id']

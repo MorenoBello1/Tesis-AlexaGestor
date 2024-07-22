@@ -13,7 +13,7 @@ def ingreso_procesos():
 @procesos_ruta.route('/agregar/proceso', methods=['POST'])
 def add_proceso():
     try:
-        nombre_pa = request.form.get("nombre_pa")
+        nombre_pa = request.form.get("nombre_pa", '').strip()
         fecha_pa_inicio = request.form.get("fecha_pa_inicio")
         fecha_pa_fin = request.form.get("fecha_pa_fin")
         observaciones = request.form.get("observaciones")

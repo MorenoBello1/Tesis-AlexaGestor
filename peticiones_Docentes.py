@@ -32,8 +32,8 @@ def get_docentes():
 def add_docente():
     data = request.get_json()
     print("Datos recibidos:", data)
-    nombre_docente = data.get("nombre_docente")
-    apellido_docente = data.get("apellido_docente")
+    nombre_docente = data.get("nombre_docente", "").strip()
+    apellido_docente = data.get("apellido_docente", "").strip()
     
     if not nombre_docente or not apellido_docente:
         return jsonify(success=False, message='Faltan campos por completar')

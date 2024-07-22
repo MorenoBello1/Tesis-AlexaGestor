@@ -22,7 +22,7 @@ def add_comunidad():
     print("Datos recibidos:", data)
     
     # Extraer los campos del JSON recibido
-    nombre_comunidad = data.get("nombre_comunidad")
+    nombre_comunidad = data.get("nombre_comunidad","").strip()
     periodo_comunidad = data.get("periodo_comunidad")
     ubicacion_comunidad = data.get("ubicacion_comunidad")
     observaciones = data.get("observaciones")

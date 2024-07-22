@@ -13,7 +13,7 @@ def home():
 @login_ruta.route('/sesion', methods=['POST'])
 def verificarsesion():
     data = request.get_json()
-    correo = data.get("correo")
+    correo = data.get("correo", '').strip()
     contrasenia = data.get("contrasenia")
     
     if not correo or not contrasenia:
