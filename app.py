@@ -11,6 +11,7 @@ from peticiones_Formatos_Documentos import formatos_ruta
 from peticiones_Proceso_Academicos import procesos_ruta
 from peticiones_PerfilDocente_Gemeni import perfil_ruta
 from peticiones_usuarios import user_ruta
+from auth import login
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Necesario para manejar sesiones en Flask

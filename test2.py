@@ -1,59 +1,74 @@
 from conexion import *
 import unicodedata
+import re 
+from unidecode import unidecode
 
-import uuid
 
+def normalizar_texto(texto):
+    """ Normaliza el texto eliminando tildes y convirtiendo a minúsculas. """
+    return unicodedata.normalize('NFD', texto).encode('ascii', 'ignore').decode('utf-8').lower()
 
-from pymongo import MongoClient
+def seleccionar_horario(dato):
+    palabras = dato.split()
+    
+    nombre = None
+    apellido = None
 
-# Supongo que ya tienes la conexión establecida, aquí se omite la conexión por simplicidad
-client = connect_to_mongodb() # Sustituye 'tu_uri_de_conexion' con tu URI de conexión real
-db = client.AlexaGestor
-docentes_collection = db.docentes
+    if len(palabras) >= 2:
+        nombre = palabras[0]
+        apellido = palabras[1]
+    elif len(palabras) == 1:
+        nombre = palabras[0]
 
-# Datos para insertar
-datos_docentes = [
-    {"nombre_docente": "Oscar Armando", "apellido_docente": "González López"},
-    {"nombre_docente": "Jorge Sergio", "apellido_docente": "Herrera Tapia"},
-    {"nombre_docente": "Luzmila Benilda", "apellido_docente": "López Reyes"},
-    {"nombre_docente": "Mike Paolo", "apellido_docente": "Machuca Avalos"},
-    {"nombre_docente": "Adriana Virginia", "apellido_docente": "Macias Espinales"},
-    {"nombre_docente": "Luis Jacinto", "apellido_docente": "Mendoza Cuzme"},
-    {"nombre_docente": "Henry Neurio", "apellido_docente": "Mero Briones"},
-    {"nombre_docente": "Winther Abel", "apellido_docente": "Molina Loor"},
-    {"nombre_docente": "Robert Wilfrido", "apellido_docente": "Moreira Centeno"},
-    {"nombre_docente": "Jorge Aníbal", "apellido_docente": "Moya Delgado"},
-    {"nombre_docente": "Dolores Esperanza", "apellido_docente": "Muñoz Verduga"},
-    {"nombre_docente": "Joffre Edgardo", "apellido_docente": "Panchana Flores"},
-    {"nombre_docente": "Jonny Vicente", "apellido_docente": "Pérez Veliz"},
-    {"nombre_docente": "Luigi Fabian", "apellido_docente": "Pihuave Calderón"},
-    {"nombre_docente": "Jorge Iván", "apellido_docente": "Pincay Ponce"},
-    {"nombre_docente": "Patricia Alexandra", "apellido_docente": "Quiroz Palma"},
-    {"nombre_docente": "Jose Jacinto", "apellido_docente": "Reyes Cárdenas"},
-    {"nombre_docente": "Fabricio Javier", "apellido_docente": "Rivadeneira Zambrano"},
-    {"nombre_docente": "Alex Andrés", "apellido_docente": "Santamaria Philco"},
-    {"nombre_docente": "Hiraida Monserrate", "apellido_docente": "Santana Cedeño"},
-    {"nombre_docente": "Juan Carlos", "apellido_docente": "Sendon Varela"},
-    {"nombre_docente": "Sandra Jackeline", "apellido_docente": "Soledispa Pereira"},
-    {"nombre_docente": "Rubén Antonio", "apellido_docente": "Zamora Cusme"},
-    {"nombre_docente": "Junior Jose", "apellido_docente": "Zamora Mendoza"},
-    {"nombre_docente": "Willian Jesús", "apellido_docente": "Zamora Mero"},
-    {"nombre_docente": "Jharol Antonio", "apellido_docente": "Ormaza Sabando"},
-    {"nombre_docente": "Mariuxi Alexandra", "apellido_docente": "Bruzza Moncayo"},
-    {"nombre_docente": "Cesar Eduardo", "apellido_docente": "Cedeño Cedeño"},
-    {"nombre_docente": "Pedro Pablo", "apellido_docente": "Pihuave Mendoza"},
-    {"nombre_docente": "Rubén Darío", "apellido_docente": "Solorzano Cadena"}
-]
+    nombre_normalizado = normalizar_texto(nombre) if nombre else None
+    apellido_normalizado = normalizar_texto(apellido) if apellido else None
 
-# Insertar documentos
-for dato in datos_docentes:
-    docente_id = str(uuid.uuid4())
-    docentes = {
-        "_id": docente_id,
-        "nombre_docente": dato["nombre_docente"],
-        "apellido_docente": dato["apellido_docente"]
-    }
-    docentes_collection.insert_one(docentes)
+    client = connect_to_mongodb()
+    if client:
+        try:
+            db = client.AlexaGestor
+            collection = db.horariosIndividual
+            
+            # Construcción de la consulta para nombre y apellido en cualquier orden
+            query = {"$or": []}
 
-print("Documentos insertados con éxito.")
-client.close()
+            if nombre_normalizado and apellido_normalizado:
+                query["$or"].append({"horario_nombre_imagen": {"$regex": f"^{nombre_normalizado}.*{apellido_normalizado}$", "$options": "i"}})
+                query["$or"].append({"horario_nombre_imagen": {"$regex": f"^{apellido_normalizado}.*{nombre_normalizado}$", "$options": "i"}})
+            
+            if nombre_normalizado:
+                query["$or"].append({"horario_nombre_imagen": {"$regex": f"^{nombre_normalizado}.*$", "$options": "i"}})
+            
+            if apellido_normalizado:
+                query["$or"].append({"horario_nombre_imagen": {"$regex": f"^{apellido_normalizado}.*$", "$options": "i"}})
+
+            if not query["$or"]:
+                client.close()
+                return None, None
+
+            horario = collection.find_one(
+                query,
+                {"_id": 0, "imagen_ids": 1, "horario_nombre_imagen": 1}
+            )
+            
+            if horario:
+                imagen_ids = horario.get("imagen_ids", [])
+                nombre_completo = horario.get("horario_nombre_imagen", "")
+                client.close()
+                return imagen_ids, nombre_completo
+            else:
+                client.close()
+                return None, None
+        
+        except Exception as e:
+            print(f"Error al buscar el horario: {e}")
+            client.close()
+            return None, None
+    
+    else:
+        print("No se pudo conectar a MongoDB Atlas")
+        return None, None
+    
+dato="zamora"    
+ids, nombre = seleccionar_horario(dato)
+print(f"Entrada: {dato} => IDs: {ids}, Nombre: {nombre}")
