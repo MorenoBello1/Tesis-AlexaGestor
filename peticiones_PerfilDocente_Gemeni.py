@@ -5,12 +5,18 @@ import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import uuid
 import os
+import threading
+
 import base64
 from threading import Thread
 import time
 from datetime import datetime
 
 perfil_ruta = Blueprint('Perfil', __name__)
+stop_event = threading.Event()
+update_thread = None
+is_updating = False
+
 
 @perfil_ruta.route('/perfil_scholar/')
 def ingreso_procesos():
@@ -53,6 +59,9 @@ def process_and_store_data(perfilgoogle_id, docente_id, perfil_id):
     except Exception as e:
         print(f"Error al procesar datos: {e}")
 
+    finally:
+        client.close()
+
 # Función para obtener detalles del autor y sus publicaciones
 def fetch_author_details(author_id):
     author = scholarly.search_author_id(author_id)
@@ -90,9 +99,9 @@ def add_perfil():
         if not author_name or author_name == "ID de autor no válido":
             return jsonify(success=False, message='El autor no puede estar vacio ni ser invalido')
 
-
         if not docente_id or not perfilgoogle_id:
             return jsonify(success=False, message='Faltan campos por completar')
+
         client = connect_to_mongodb()
         db = client.AlexaGestor
         collection_perfiles = db.perfiles
@@ -117,7 +126,7 @@ def add_perfil():
 
         if insercion.inserted_id:
             # Iniciar el procesamiento en un hilo separado
-            Thread(target=process_and_store_data, args=(perfilgoogle_id, docente_id, perfil_id)).start()
+            threading.Thread(target=process_and_store_data, args=(perfilgoogle_id, docente_id, perfil_id), daemon=True).start()
 
             return jsonify(success=True)
 
@@ -128,15 +137,16 @@ def add_perfil():
         return jsonify(success=False, message=f'No se encontro el ID proporcionado en google Scholar')
 
     except Exception as e:
-        print("Error")
+        print(f"Error al agregar perfil: {e}")
+        return jsonify(success=False, message=f'Error al agregar perfil')
 # Función para la actualización periódica de perfilesGoogle
 def periodic_update():
-    while True:
-        try:
+    global is_updating
+    try:
+        while is_updating:
             print("Actualización periódica en proceso...")
             client = connect_to_mongodb()
             db = client.AlexaGestor
-            # Obtener todos los perfiles de la colección perfiles
             collection_perfiles = db.perfiles
 
             for perfil in collection_perfiles.find({}):
@@ -144,14 +154,21 @@ def periodic_update():
                 docente_id = perfil['docente_id']
                 perfil_id = perfil['_id']
 
-                # Procesar y almacenar datos actualizados en perfilesGoogle
-                Thread(target=process_and_store_data, args=(perfilgoogle_id, docente_id, perfil_id)).start()
+                process_and_store_data(perfilgoogle_id, docente_id, perfil_id)
 
-        except Exception as e:
-            print(f"Error en la actualización periódica: {e}")
+            print("Actualización periódica completada.")
+            is_updating = False
 
-        # Intervalo de actualización (24 horas en este ejemplo)
-        time.sleep(86400)  # 24 horas en segundos
+            # Intervalo de actualización (4 meses en este ejemplo)
+            for _ in range(4 * 30 * 24 * 60):  # 4 meses en minutos
+                if not is_updating:
+                    break
+                time.sleep(60)  # Dormir un minuto
+
+    except Exception as e:
+        print(f"Error en la actualización periódica: {e}")
+        is_updating = False
+
 @perfil_ruta.route('/eliminar/perfil/<_id>', methods=['DELETE'])
 def delete_perfil(_id):
     client = connect_to_mongodb()
@@ -217,4 +234,29 @@ def send_author_id():
     return jsonify({'author_name': author_name})
     
 # Iniciar la actualización periódica en un hilo separado al iniciar la aplicación Flask
-Thread(target=periodic_update).start()
+#threading.Thread(target=periodic_update, daemon=True).start()
+
+@perfil_ruta.route('/iniciar_actualizacion', methods=['POST'])
+def iniciar_actualizacion():
+    global is_updating
+
+    if is_updating:
+        return jsonify(success=False, message='El proceso de actualización ya está en curso.')
+
+    is_updating = True
+    thread = Thread(target=periodic_update)
+    thread.start()
+
+    return jsonify(success=True, message='Proceso de actualización iniciado.')
+
+
+@perfil_ruta.route('/detener_actualizacion', methods=['POST'])
+def detener_actualizacion():
+    global is_updating
+    is_updating = False
+    return jsonify(success=True, message='Proceso de actualización detenido.')
+@perfil_ruta.route('/estado_actualizacion', methods=['GET'])
+def estado_actualizacion():
+    global is_updating
+    estado = "En curso" if is_updating else "Detenido"
+    return jsonify(success=True, estado=estado)

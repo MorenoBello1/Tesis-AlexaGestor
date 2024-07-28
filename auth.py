@@ -4,6 +4,7 @@ from pydrive2.drive import GoogleDrive
 # Directorio de las credenciales
 directorio_credenciales = "credentials_module.json"
 
+
 def login():
     gauth = GoogleAuth()
     
@@ -17,7 +18,6 @@ def login():
         # No se encontraron credenciales, autenticando de forma local
         print("No se encontraron credenciales. Realizando autenticación local.")
         gauth.LocalWebserverAuth()  # Requiere intervención del usuario
-
     elif gauth.access_token_expired:
         try:
             # Intentar refrescar el token de acceso
@@ -37,3 +37,5 @@ def login():
         gauth.SaveCredentialsFile(directorio_credenciales)
     except Exception as e:
         print(f"Error al guardar el archivo de credenciales: {e}")
+
+    return GoogleDrive(gauth)

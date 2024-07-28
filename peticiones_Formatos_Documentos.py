@@ -5,6 +5,11 @@ import os
 from auth import login  # Importar la función de autenticación desde el módulo auth
 from conexion import *
 
+from googleapiclient.http import MediaFileUpload
+from auth2 import build_service
+
+# Construir el servicio de Google Drive
+service = build_service()
 formatos_ruta = Blueprint('formatos2', __name__)
 
 UPLOAD_FOLDER = 'uploads'
@@ -18,14 +23,30 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 # Función para subir archivo a OneDrive
 def subir_archivoN(ruta_archivo, nombre_nuevo, id_folder):
-    credenciales = login()
-    archivo = credenciales.CreateFile({
-        'title': nombre_nuevo,
-        'parents': [{"kind": "drive#fileLink", "id": id_folder}]
-    })
-    archivo.SetContentFile(ruta_archivo)
-    archivo.Upload()
-    return archivo['id']  # Devuelve el ID del archivo subido en OneDrive
+    try:
+        # Metadatos del archivo
+        file_metadata = {
+            'name': nombre_nuevo,
+            'parents': [id_folder]
+        }
+
+        # Configurar el contenido del archivo
+        media = MediaFileUpload(ruta_archivo, resumable=True)
+
+        # Crear el archivo en Google Drive
+        print("Intentando crear el archivo en Google Drive...")
+        archivo = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        
+        # Imprimir el ID del archivo creado
+        file_id = archivo.get('id')
+        print(f"Archivo subido exitosamente con ID: {file_id}")
+
+        # Devolver el ID del archivo subido
+        return file_id
+
+    except Exception as e:
+        print(f"Error al subir el archivo: {str(e)}")
+        return None
 
 # Verifica si la extensión del archivo está permitida
 def allowed_file(filename):
@@ -155,7 +176,7 @@ def delete_formato(_id):
         if result.deleted_count == 1:
             # Eliminar archivo de OneDrive si existe ID de OneDrive
             if id_onedrive:
-                borrar_formatoOnedrive(id_onedrive)
+                borrar_formatodrive(id_onedrive)
             return jsonify(success=True)
         else:
             return jsonify(success=False, message=f'Ha surgido un problema al eliminar al formato')
@@ -164,12 +185,14 @@ def delete_formato(_id):
     finally:
         client.close()
 
-def borrar_formatoOnedrive(id_archivo):
-    credenciales = login()
+def borrar_formatodrive(id_archivo):
+    service = build_service()
+    
     try:
-        archivo = credenciales.CreateFile({'id': id_archivo})
-        archivo.Delete()  # Eliminar el archivo de OneDrive
+        # Llamar al método files().delete() para eliminar el archivo
+        service.files().delete(fileId=id_archivo).execute()
+        print("Archivo eliminado exitosamente.")
         return True
-    except Exception as e:
-        print(f"Error al borrar archivo de OneDrive: {str(e)}")
+    except Exception as error:
+        print(f"Error al borrar archivo de Google Drive: {error}")
         return False

@@ -102,6 +102,11 @@
                         <input id="apellido_docente" name="apellido_docente" class="form-control">
                         <div id="apellido_docente_help" class="form-text">Aquí agrega el apellido del docente.</div>
                         
+                        <label for="correo" class="form-label">Correo Institucional:</label><br>
+                        <input type="email" id="correo" name="correo" class="form-control" placeholder="Ejemplo: jorge.pincay@uleam.edu.ec" >
+                        <div id="correo_help" class="form-text">Aquí agrega el solo el correo institucional.</div>
+
+
                         <div class="row">
                             <div class="col-10"></div>
                             <div class="col-2">
@@ -128,6 +133,7 @@
                                 <th scope="col">ID</th>
                                 <th scope="col">Nombres</th>
                                 <th scope="col">Apellidos</th>
+                                <th scope="col">Correo</th>
                                 <th scope="col">Acciones</th>
                             </tr>
                         </thead>
@@ -137,6 +143,7 @@
                                 <td>{{ doc.id }}</td>
                                 <td>{{ doc.nombres }}</td>
                                 <td>{{ doc.apellidos }}</td>
+                                <td>{{ doc.correo }}</td>
                                 <td><!-- acciones aquí --></td>
                             </tr>
                             {% endfor %}
@@ -191,7 +198,7 @@
                     text: data.message,
                     icon: 'error',
                     showConfirmButton: false,
-                    timer: 1000,  // Tiempo en milisegundos (3 segundos)
+                    timer: 1500,  // Tiempo en milisegundos (3 segundos)
                 });
         }  
     })
@@ -226,6 +233,7 @@ function cargarDocentes() {
                     <td>${contador}</td>
                     <td>${docente.nombre_docente}</td>
                     <td>${docente.apellido_docente}</td>
+                    <td>${docente.correo}</td>
                     <td>
                         <button class="btn btn-danger btn-sm" onclick="eliminarDocente('${docente._id}')">Eliminar</button>
                     </td>

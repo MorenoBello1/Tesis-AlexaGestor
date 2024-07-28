@@ -1,7 +1,7 @@
 from flask import Blueprint,Flask, request, jsonify, render_template
 from conexion import *
 from flask_login import login_required
-
+import re
 import uuid
 
 
@@ -34,39 +34,42 @@ def add_docente():
     print("Datos recibidos:", data)
     nombre_docente = data.get("nombre_docente", "").strip()
     apellido_docente = data.get("apellido_docente", "").strip()
-    
-    if not nombre_docente or not apellido_docente:
+    correo = data.get("correo", "").strip().lower()
+
+    EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+[.][a-zA-Z0-9._%+-]+@uleam\.edu\.ec$")
+
+    if not EMAIL_REGEX.match(correo):
+        return jsonify(success=False, message='El correo debe ser válido, contener un punto antes del @ y terminar en @uleam.edu.ec')
+    if not nombre_docente or not apellido_docente or not correo:
         return jsonify(success=False, message='Faltan campos por completar')
 
     client = connect_to_mongodb()
 
     try:
-        if client:
-            print("Conexión exitosa a MongoDB")
-            db = client.AlexaGestor
-            collection = db.docentes
-            
-            # Generar un ID único
-            docente_id = str(uuid.uuid4())
+        db = client.AlexaGestor
+        collection = db.docentes
 
-            docentes = {
-                "_id": docente_id,
-                "nombre_docente": nombre_docente,
-                "apellido_docente": apellido_docente
-            }
-            result = collection.insert_one(docentes)
-            client.close()
+        # Generar un ID único
+        docente_id = str(uuid.uuid4())
 
-            if result:
-                return jsonify(success=True)
-            else: 
-                return jsonify(success=False, message=f'Ha surgido un error al agregar al docente {nombre_docente}.')
+        docentes = {
+            "_id": docente_id,
+            "nombre_docente": nombre_docente,
+            "apellido_docente": apellido_docente,
+            "correo": correo
+        }
+        result = collection.insert_one(docentes)
+        
+        if result.inserted_id:
+            return jsonify(success=True, message=f'Docente {nombre_docente} agregado exitosamente.')
         else:
-            return jsonify(success=False, message=f'Ha surgido un problema con la conexión.')
+            return jsonify(success=False, message=f'Ha surgido un error al agregar al docente {nombre_docente}.')
     except Exception as e:
         print("Error:", e)
         return jsonify(success=False)
-    
+    finally:
+        client.close()
+
 @docentes_ruta.route('/eliminar/docente/<_id>', methods=['DELETE'])
 def delete_docente(_id):
     client = connect_to_mongodb()

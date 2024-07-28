@@ -62,7 +62,7 @@ def add_proceso():
         if result:
             return jsonify(success=True)
         else:
-            return jsonify(success=False, message=f'Ha surgido un error al agregar al docente {nombre_docente}.')
+            return jsonify(success=False, message=f'Ha surgido un error al agregar {nombre_pa}.')
     except Exception as e:
         print("Error")
 @procesos_ruta.route('/eliminar/proceso/<_id>', methods=['DELETE'])

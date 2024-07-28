@@ -112,16 +112,12 @@ def obtener_comunidades():
             carrera_id = comunidad.get("carrera_id")
             
             # Imprime los IDs para depuración
-            print(f"Buscando docente_id: {docente_id}")
-            print(f"Buscando carrera_id: {carrera_id}")
-            
+           
             # Consulta para docente
             docente = collection_docentes.find_one({"_id": docente_id}, {"_id": 0, "nombre_docente": 1, "apellido_docente": 1})
-            print(f"Docente encontrado: {docente}")
             
             # Consulta para carrera usando cadena
             carrera = collection_carreras.find_one({"_id": carrera_id}, {"_id": 0, "nombre_carrera": 1})
-            print(f"Carrera encontrada: {carrera}")
             
             # Asigna nombres a la comunidad
             comunidad["nombre_docente"] = f"{docente['nombre_docente']} {docente['apellido_docente']}" if docente else "Desconocido"
