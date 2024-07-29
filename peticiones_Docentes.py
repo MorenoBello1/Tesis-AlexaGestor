@@ -18,7 +18,7 @@ def verificar_autenticacion():
 def home():
     if not verificar_autenticacion():
             return render_template('Login.html') 
-    return render_template('docentes.html')
+    return render_template('Docentes.html')
 
 # Ruta para manejar solicitudes GET a /api/data
 @docentes_ruta.route('/obtener_docentes', methods=['GET'])
