@@ -1,6 +1,5 @@
-from flask import Blueprint,Flask, request, jsonify, render_template
+from flask import Blueprint,Flask, request, jsonify, render_template,session
 from conexion import *
-from flask_login import login_required
 
 import uuid
 
@@ -8,9 +7,17 @@ import uuid
 
 eventos_ruta = Blueprint('eventos', __name__)
 
+def verificar_autenticacion():
+    # Verificar si 'usuario_id' está en la sesión
+    if 'usuario_id' not in session:
+        # Redireccionar a la página de login si no está autenticado
+        return False
+    return True
 # Ruta principal que renderiza un archivo HTML
 @eventos_ruta.route('/eventos/')
 def home():
+    if not verificar_autenticacion():
+            return render_template('Login.html') 
     return render_template('Eventos.html')
 
 # Ruta para manejar solicitudes GET a /api/data

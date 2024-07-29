@@ -8,6 +8,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .nav-link.active {
@@ -23,8 +25,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background-color: rgb(74, 133, 172);">
         <div class="container">
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div>
@@ -37,29 +38,46 @@
                 </ul>
             </div>
             <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link text-light fs-6" href="/comunidades/">Comunidades</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fs-6" href="/docentes/">Docentes</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fs-6" href="/horarios/">Horarios</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fs-6" href="/eventos/">Eventos</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fs-6" href="/carreras/">Carreras</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fs-6" href="/formatos2/">Formatos</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fs-6" href="/procesos/">Procesos Académicos</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fs-6" href="/perfil_scholar/">Perfil Académico</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fs-6" href="/usuarios/">Usuarios</a></li>
-                </ul>
-            </div>
-            <div>
+                
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link text-light fw-light" href="/logout">
-                            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
-                        </a>
+                        <a class="nav-link text-light fs-6" href="/comunidades/">Comunidades</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-light fs-6" href="/docentes/">Docentes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-light fs-6" href="/horarios/">Horarios</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-light fs-6" href="/eventos/">Eventos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-light fs-6" href="/carreras/">Carreras</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-light fs-6" href="/formatos2/">Formatos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-light fs-6" href="/procesos/">Procesos Académicos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-light fs-6" href="/perfil_scholar/">Perfil Académico</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-light fs-6" href="/usuarios/">Usuarios</a>
                     </li>
                 </ul>
             </div>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link text-light fs-6" href="/logout">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                    </a>
+                </li>
+            </ul>
         </div>
-    </nav>
+      </nav>
 
     <nav class="navbar" style="background-color:#424242; color: #ffffff;">
         <div class="d-flex justify-content-around">

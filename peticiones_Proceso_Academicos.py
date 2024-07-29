@@ -1,13 +1,21 @@
-from flask import Blueprint, Flask, request, jsonify, render_template
+from flask import Blueprint, Flask, request, jsonify, render_template,session
 from conexion import *
 import uuid
 import os
 import base64
 
 procesos_ruta = Blueprint('procesos', __name__)
+def verificar_autenticacion():
+    # Verificar si 'usuario_id' está en la sesión
+    if 'usuario_id' not in session:
+        # Redireccionar a la página de login si no está autenticado
+        return False
+    return True
 
 @procesos_ruta.route('/procesos/')
 def ingreso_procesos():
+    if not verificar_autenticacion():
+            return render_template('Login.html') 
     return render_template('Procesos.html')
 
 @procesos_ruta.route('/agregar/proceso', methods=['POST'])

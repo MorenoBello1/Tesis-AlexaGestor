@@ -1,7 +1,6 @@
 from conexion import *
-from flask import Blueprint,Flask, request, jsonify, render_template
+from flask import Blueprint,Flask, request, jsonify, render_template,session
 from conexion import *
-from auth import login  # Importar la función de autenticación desde el módulo auth
 
 from google.oauth2 import service_account
 
@@ -10,10 +9,19 @@ import uuid
 
 user_ruta = Blueprint('usuarios', __name__)
 
+def verificar_autenticacion():
+    # Verificar si 'usuario_id' está en la sesión
+    if 'usuario_id' not in session:
+        # Redireccionar a la página de login si no está autenticado
+        return False
+    return True
 # Ruta principal que renderiza un archivo HTML
 @user_ruta.route('/usuarios/')
 def home():
+    if not verificar_autenticacion():
+            return render_template('Login.html') 
     return render_template('Usuarios.html')
+
 @user_ruta.route('/obtener_usuarios', methods=['GET'])
 def get_carreras():
     client = connect_to_mongodb()

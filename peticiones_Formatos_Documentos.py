@@ -1,10 +1,8 @@
-from flask import Blueprint, request, render_template, jsonify
+from flask import Blueprint, request, render_template, jsonify, session
 from werkzeug.utils import secure_filename
 import uuid
 import os
-from auth import login  # Importar la función de autenticación desde el módulo auth
 from conexion import *
-
 from googleapiclient.http import MediaFileUpload
 from auth2 import build_service
 
@@ -30,18 +28,9 @@ def subir_archivoN(ruta_archivo, nombre_nuevo, id_folder):
             'parents': [id_folder]
         }
 
-        # Configurar el contenido del archivo
         media = MediaFileUpload(ruta_archivo, resumable=True)
-
-        # Crear el archivo en Google Drive
-        print("Intentando crear el archivo en Google Drive...")
-        archivo = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        
-        # Imprimir el ID del archivo creado
+        archivo = service.files().create(body=file_metadata, media_body=media, fields='id').execute()   
         file_id = archivo.get('id')
-        print(f"Archivo subido exitosamente con ID: {file_id}")
-
-        # Devolver el ID del archivo subido
         return file_id
 
     except Exception as e:
@@ -52,8 +41,17 @@ def subir_archivoN(ruta_archivo, nombre_nuevo, id_folder):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def verificar_autenticacion():
+    # Verificar si 'usuario_id' está en la sesión
+    if 'usuario_id' not in session:
+        # Redireccionar a la página de login si no está autenticado
+        return False
+    return True
+
 @formatos_ruta.route('/formatos2/')
 def home():
+    if not verificar_autenticacion():
+            return render_template('Login.html') 
     return render_template('Formatos.html')
 
 @formatos_ruta.route('/upload_and_add', methods=['POST'])

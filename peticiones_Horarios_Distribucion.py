@@ -3,13 +3,19 @@ from werkzeug.utils import secure_filename
 import os
 import fitz  # PyMuPDF
 import time, re
-from auth import login  # Tu función de autenticación con Google Drive
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from conexion import *  # Tu función de conexión a MongoDB si es necesario
 import uuid
 import pytesseract
 from PIL import Image
+from auth2 import build_service
+from googleapiclient.http import MediaFileUpload
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+service = build_service()
+
 horarios_ruta = Blueprint('horarios', __name__)
 
 UPLOAD_FOLDER = 'uploads'
@@ -26,31 +32,38 @@ def allowed_file(filename):
 
 # Función para subir archivo a Google Drive y devolver el ID
 def subir_archivo_a_drive(ruta_archivo, id_folder):
-    credenciales = login()  # Función para obtener credenciales de Google Drive
 
-    archivo = credenciales.CreateFile({
-        'title': os.path.basename(ruta_archivo),
-        'parents': [{"kind": "drive#fileLink", "id": id_folder}]
-    })
-    archivo.SetContentFile(ruta_archivo)
-    archivo.Upload()
-    return archivo['id'], archivo['title']  # Devuelve el ID del archivo subido en Google Drive
+    file_metadata = {
+        'name': os.path.basename(ruta_archivo),
+        'parents': [id_folder]
+    }
+    media = MediaFileUpload(ruta_archivo, resumable=True)
+    file = service.files().create(body=file_metadata, media_body=media, fields='id, name').execute()
+    id=file.get('id')
+    title= file.get('name')
+    return id, title
 
 
 
-def subir_imagen_a_drive(credenciales, image_path, folder_id, image_title):
+def subir_imagen_a_drive(credenciales, ruta_archivo, id_folder, nombre_archivo):
     try:
-        imagen_drive = credenciales.CreateFile({
-            'title': image_title,
-            'parents': [{"kind": "drive#fileLink", "id": folder_id}]
-        })
-        imagen_drive.SetContentFile(image_path)
-        imagen_drive.Upload()
-        file_id = imagen_drive['id']  # Obtén el ID del archivo subido
-        return file_id
+        
+        
+        # Definir los metadatos del archivo
+        file_metadata = {
+            'name': nombre_archivo,
+            'parents': [id_folder]  # Establecer la carpeta en Google Drive donde se subirá el archivo
+        }
+        # Crear un objeto MediaFileUpload para el archivo que se va a subir
+        media = MediaFileUpload(ruta_archivo, mimetype='image/jpeg')  # Cambia el tipo MIME si es necesario
+        
+        # Subir el archivo
+        archivo = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        print(f"Archivo subido con ID: {archivo.get('id')}")
+        return archivo.get('id')
     except Exception as e:
         print(f"Error al subir la imagen a Google Drive: {str(e)}")
-        return None  # Retorna None en caso de error
+        return None
 
 def extraer_lineas_con_profesor(texto):
     # Patrón para buscar líneas que contienen "Profesor" y capturar títulos y nombres
@@ -142,16 +155,14 @@ def upload_and_process():
     return redirect(url_for('horarios.ingreso_comunidades'))
 
 # Función para convertir PDF a imágenes y subirlas a Google Drive
-def convertir_pdf_a_imagenes_y_subir_a_drive(input_pdf,horario_id, dpi=300):
-    credenciales = login()  # Asume que esta función maneja la autenticación con Google Drive
+def convertir_pdf_a_imagenes_y_subir_a_drive(input_pdf, horario_id, dpi=300):
+    credenciales = build_service()  # Asume que esta función maneja la autenticación con Google Drive
 
     imagen_ids = []  # Lista para almacenar los IDs de las imágenes subidas
-    nombrefinal_str = ""
 
     try:
         id_folder = '18KiGWZdqFzHS9eSpeBjetyH3YW4g3lce'
         documento = fitz.open(input_pdf)
-        nombres_profesores = []
 
         for numero_pagina in range(len(documento)):
             pagina = documento.load_page(numero_pagina)
@@ -162,12 +173,12 @@ def convertir_pdf_a_imagenes_y_subir_a_drive(input_pdf,horario_id, dpi=300):
             output_image_path = os.path.join(horarios_ruta.config['UPLOAD_FOLDER'], f"pagina_{numero_pagina + 1}.png")
             pix.save(output_image_path)
             texto = pytesseract.image_to_string(Image.open(output_image_path), lang='spa', config='--psm 6 --oem 1')
-            
+
             lineas_con_profesor = extraer_lineas_con_profesor(texto)
             if not lineas_con_profesor:
-                nombrefinal = f"NO RECONOCIDO {numero_pagina + 1}"
-                
+                nombrefinal = f"problema{numero_pagina + 1}"
             else:
+                nombres_profesores = []
                 for linea in lineas_con_profesor:
                     nombres_extraccion = extraer_nombres_validos(linea)
                     if nombres_extraccion:
@@ -178,9 +189,15 @@ def convertir_pdf_a_imagenes_y_subir_a_drive(input_pdf,horario_id, dpi=300):
                         else:
                             nombrefinal = f"DocenteNoReconocido_{numero_pagina + 1}"
 
+            # Reemplazar "WILLIAN" por "WILLIAM" en cualquier nombre que contenga "WILLIAN"
             nombrefinal_str = " ".join(nombrefinal)  # Concatena los nombres con un espacio
+
+            if "WILLIAN" in nombrefinal_str:
+                nombrefinal_str = nombrefinal_str.replace("WILLIAN", "WILLIAM")
+
+            # Subir la imagen a Google Drive y obtener el ID del archivo
             file_id = subir_imagen_a_drive(credenciales, output_image_path, id_folder, nombrefinal_str)
-            upload_and_process_image(horario_id, file_id, output_image_path ,nombrefinal_str)
+            upload_and_process_image(horario_id, file_id, output_image_path, nombrefinal_str)
 
             if file_id:
                 imagen_ids.append(file_id)
@@ -201,7 +218,6 @@ def convertir_pdf_a_imagenes_y_subir_a_drive(input_pdf,horario_id, dpi=300):
             documento.close()
 
     return imagen_ids, nombrefinal_str
-
 
 def upload_and_process_image(horario_id, imagen_ids, imagen_path, nombrefinal_str):
     client = connect_to_mongodb()
@@ -284,36 +300,29 @@ def delete_horario(_id):
         client.close()
 
 def borrar_horarioimagen(id_archivo):
-    credenciales = login()
     try:
-        print(f"Intentando eliminar archivo de imagen de OneDrive con ID: {id_archivo}")
-        archivo = credenciales.CreateFile({'id': id_archivo})
-        print(f"Obteniendo metadatos del archivo de imagen con ID: {id_archivo}")
-        archivo.FetchMetadata()  # Verificar si el archivo existe
-        print(f"Eliminando archivo de imagen con ID: {id_archivo}")
-        archivo.Delete()  # Eliminar el archivo de OneDrive
-        print(f"Archivo de imagen con ID: {id_archivo} eliminado correctamente")
-        return True
-    except FileNotFoundError:
-        print(f"Error: Archivo de imagen con ID {id_archivo} no encontrado en OneDrive")
-        return False
-    except Exception as e:
-        print(f"Error al borrar archivo de imagen de OneDrive con ID {id_archivo}: {str(e)}")
-        return False
-
-def borrar_horarioOnedrive(id_archivo):
-    credenciales = login()
-    try:
-        print(f"Creando archivo con ID: {id_archivo}")
-        archivo = credenciales.CreateFile({'id': id_archivo})
-        print(f"Obteniendo metadatos del archivo con ID: {id_archivo}")
-        archivo.FetchMetadata()  # Verificar si el archivo existe
-        print(f"Eliminando archivo con ID: {id_archivo}")
-        archivo.Delete()  # Eliminar el archivo de OneDrive
+        print(f"Intentando eliminar archivo con ID: {id_archivo}")
+        
+        # Eliminar el archivo usando la API de Google Drive
+        service.files().delete(fileId=id_archivo).execute()
+        
         print(f"Archivo con ID: {id_archivo} eliminado correctamente")
         return True
     except Exception as e:
-        print(f"Error al borrar archivo de OneDrive con ID: {id_archivo}: {str(e)}")
+        print(f"Error al borrar archivo con ID {id_archivo}: {str(e)}")
+        return False
+
+def borrar_horarioOnedrive(id_archivo):
+    try:
+        print(f"Intentando eliminar archivo con ID: {id_archivo}")
+
+        # Eliminar el archivo usando la API de Google Drive
+        service.files().delete(fileId=id_archivo).execute()
+        
+        print(f"Archivo con ID: {id_archivo} eliminado correctamente")
+        return True
+    except Exception as e:
+        print(f"Error al borrar archivo con ID {id_archivo} de Google Drive: {str(e)}")
         return False
 @horarios_ruta.route('/api/horarios_individual', methods=['GET'])
 def obtener_horariosIn():

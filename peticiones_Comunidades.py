@@ -1,14 +1,21 @@
-from flask import Blueprint,Flask, request, jsonify, render_template
+from flask import Blueprint,Flask, request, jsonify, render_template, session
 from conexion import *
-from flask_login import login_required
 
 import uuid
 
 comunidades_ruta = Blueprint('comunidades', __name__)
 
 # Ruta principal que renderiza un archivo HTML
+def verificar_autenticacion():
+    # Verificar si 'usuario_id' está en la sesión
+    if 'usuario_id' not in session:
+        # Redireccionar a la página de login si no está autenticado
+        return False
+    return True
 @comunidades_ruta.route('/comunidades/')
 def ingreso_comunidades():
+    if not verificar_autenticacion():
+            return render_template('Login.html') 
     return render_template('Comunidades.html')
 # Ruta para manejar solicitudes GET a /api/data
 @comunidades_ruta.route('/api/data', methods=['GET'])
