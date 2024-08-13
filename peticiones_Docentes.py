@@ -2,6 +2,7 @@ from flask import Blueprint,Flask, request, jsonify, render_template,session
 from conexion import *
 import re
 import uuid
+from unidecode import unidecode
 
 
 
@@ -42,6 +43,7 @@ def add_docente():
     nombre_docente = data.get("nombre_docente", "").strip()
     apellido_docente = data.get("apellido_docente", "").strip()
     correo = data.get("correo", "").strip().lower()
+    correo = unidecode(correo)
 
     EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+[.][a-zA-Z0-9._%+-]+@uleam\.edu\.ec$")
 
@@ -92,6 +94,30 @@ def delete_docente(_id):
         return jsonify(success=False)
     finally:
         client.close()
+@docentes_ruta.route('/obtener/docente/<string:docente_id>', methods=['GET'])
+def obtener_docente(docente_id):
+    client = connect_to_mongodb()
+    try:
+        db = client.AlexaGestor
+        collection = db.docentes
+        
+        docente = collection.find_one({"_id": docente_id})
+        print("Docente encontrado:", docente)
+
+        if docente:
+            return jsonify({
+                "_id": docente.get("_id",""),
+                "nombre_docente": docente.get("nombre_docente", ""),
+                "apellido_docente": docente.get("apellido_docente", ""),
+                "correo": docente.get("correo", "")
+            })
+        else:
+            return jsonify({"error": "Docente no encontrado"}), 404
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({"error": "Error en el servidor"}), 500
+    finally:
+        client.close()
 
 @docentes_ruta.route('/api/docentes', methods=['GET'])
 def obtener_docentes():
@@ -114,3 +140,39 @@ def obtener_docentes():
 
     except Exception as e:
         print("error")
+@docentes_ruta.route('/actualizar/docente', methods=['PUT'])
+def actualizar_docente():
+    try:
+        # Obtener los datos del cuerpo de la solicitud
+        data = request.json
+        
+        docente_id = data.get('_id')
+        nombre_docente = data.get('nombre_docente')
+        apellido_docente = data.get('apellido_docente')
+        correo = data.get('correo')
+
+        # Verificar que se proporcionó el ID del docente
+        if not docente_id:
+            return jsonify({"success": False, "message": "ID del docente es requerido"}), 400
+        
+        client = connect_to_mongodb()
+        db = client.AlexaGestor
+        collection = db.docentes
+
+
+        resultado = collection.update_one(
+            {"_id": docente_id},
+            {"$set": {
+                "nombre_docente": nombre_docente,
+                "apellido_docente": apellido_docente,
+                "correo": correo
+            }}
+        )
+
+        if resultado.matched_count > 0:
+            return jsonify({"success": True, "message": "Docente actualizado exitosamente"}), 200
+        else:
+            return jsonify({"success": False, "message": "No se encontró el docente con el ID proporcionado"}), 404
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500

@@ -112,6 +112,8 @@
                         <label style="color: rgb(74, 133, 172); font-family: Georgia, 'Times New Roman', Times, serif" class="fs-5 fw-bold">Agregar docente</label>
                     </div>
                     <form id="docentesForm" class="p-2">
+                        <input type="hidden" id="docente_id" name="docente_id">
+
                         <label for="nombre_docente" class="form-label fs-6" style="color: #3d1214">Nombre del docente :</label><br>
                         <input type="text" id="nombre_docente" class="form-control" name="nombre_docente" aria-describedby="passwordHelpBlock">
                         <div id="nombre_docente_help" class="form-text">Aquí agrega los nombres del docente.</div>
@@ -126,10 +128,19 @@
 
 
                         <div class="row">
-                            <div class="col-10"></div>
+                            <div class="col-8"></div>
                             <div class="col-2">
-                                <button type="submit" class="btn btn-outline-primary">Añadir</button>
+                                <button type="button" id="cancelButton" class="btn btn-outline-secondary d-none" onclick="cancelarEdicion()">Cancelar</button>
+
                             </div>
+                            <div class="col-2">
+                                <button type="submit" id="addButton" class="btn btn-outline-primary">Añadir</button>
+                                <button type="button" id="updateButton" class="btn btn-outline-primary d-none " onclick="Actualizar()">Actualizar</button>
+
+                            </div>
+                            
+
+
                         </div>
                     </form>
                 </div>                
@@ -232,7 +243,80 @@
         
     });
 });
+function Actualizar() {
+    const docenteId = document.getElementById("docente_id").value;
+    const formData = new FormData(document.getElementById("docentesForm"));
 
+    // Agregar el ID al objeto FormData
+    formData.append('_id', docenteId);
+
+    fetch("/actualizar/docente", {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(Object.fromEntries(formData))
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                position: "top-end",
+                title: '¡Éxito!',
+                icon: 'success',
+                timer: 550,
+                showConfirmButton: false,
+                customClass: {
+                    popup: 'small-popup'
+                }
+            }).then(() => {
+                cargarDocentes(); // Recargar la lista de docentes
+                // Reiniciar el formulario
+                document.getElementById("docentesForm").reset();
+                document.getElementById("addButton").classList.add("d-none");
+                document.getElementById("updateButton").classList.remove("d-none");
+                document.getElementById("cancelButton").classList.remove("d-none");
+            });
+        } else {
+            Swal.fire({
+                title: 'Error',
+                text: data.message,
+                icon: 'error',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            title: 'Advertencia',
+            text: 'Ha ocurrido un error en la petición.',
+            icon: 'warning',
+            showConfirmButton: false,
+            timer: 1000
+        });
+    });
+}
+function desplazarAlPrimerCampo() {
+        // Obtener el elemento del primer campo
+        var primerCampo = document.getElementById("nombre_docente");
+        
+        // Desplazar el elemento al visible en la ventana
+        primerCampo.scrollIntoView({ behavior: "smooth", block: "start" });
+        
+        // Opcional: Enfocar el campo para que el usuario pueda comenzar a escribir de inmediato
+        primerCampo.focus();
+    }
+
+function cancelarEdicion() {
+    // Reiniciar el formulario
+    document.getElementById("docentesForm").reset();
+
+    // Cambiar la visibilidad de los botones
+    document.getElementById("addButton").classList.remove("d-none");
+    document.getElementById("updateButton").classList.add("d-none");
+    document.getElementById("cancelButton").classList.add("d-none");
+}
 function cargarDocentes() {
     fetch('/api/docentes')
         .then(response => response.json())
@@ -253,7 +337,9 @@ function cargarDocentes() {
                     <td>${docente.apellido_docente}</td>
                     <td>${docente.correo}</td>
                     <td>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarDocente('${docente._id}')">Eliminar</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarDocente('${docente._id}')">Eliminar</button> 
+                        <button class="btn btn-primary btn-sm" onclick="editarDocente('${docente._id}')">Editar</button>
+
                     </td>
                 `;
                 contador++;
@@ -267,7 +353,29 @@ function cargarDocentes() {
             console.error('Error:', error);
         });
 }
-
+function editarDocente(docenteId) {
+    // Realiza una solicitud GET para obtener los datos del docente
+    fetch(`/obtener/docente/${encodeURIComponent(docenteId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                document.getElementById("docentesForm").reset();
+                // Rellenar los campos del formulario con los datos recibidos
+                document.getElementById("docente_id").value = data._id;
+                document.getElementById("nombre_docente").value = data.nombre_docente;
+                document.getElementById("apellido_docente").value = data.apellido_docente;
+                document.getElementById("correo").value = data.correo;
+                
+                document.getElementById("addButton").classList.add("d-none");
+                document.getElementById("updateButton").classList.remove("d-none");
+                document.getElementById("cancelButton").classList.remove("d-none");
+                desplazarAlPrimerCampo();
+            }
+        })
+        .catch(error => console.error('Error al cargar los datos:', error));
+}
 function eliminarDocente(id) {
     fetch("/eliminar/docente/" + encodeURIComponent(id), {
         method: "DELETE"
