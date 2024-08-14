@@ -146,10 +146,12 @@ def actualizar_docente():
         # Obtener los datos del cuerpo de la solicitud
         data = request.json
         
-        docente_id = data.get('_id')
-        nombre_docente = data.get('nombre_docente')
-        apellido_docente = data.get('apellido_docente')
-        correo = data.get('correo')
+        docente_id = data.get('_id').strip()
+        nombre_docente = data.get('nombre_docente').strip()
+        apellido_docente = data.get('apellido_docente').strip()
+        correo = data.get('correo').strip().lower()
+        correo = unidecode(correo)
+
 
         # Verificar que se proporcionó el ID del docente
         if not docente_id:
